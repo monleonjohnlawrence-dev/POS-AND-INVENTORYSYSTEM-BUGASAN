@@ -8,8 +8,8 @@ import {
 } from 'lucide-react';
 
 export default function CashierPOS() {
-  const [inventory, setInventory] = useState([]);
-  const [cart, setCart] = useState([]);
+const [inventory, setInventory] = useState<any[]>([]);
+const [cart, setCart] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
