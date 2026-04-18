@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 export default function UserManagement() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
