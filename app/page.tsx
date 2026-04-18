@@ -1,65 +1,118 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+import { supabase } from '@/lib/supabaseClient';
+import { ShoppingBag, Lock, User, Loader2 } from "lucide-react";
+
+export default function LoginPage() {
+  const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // 1. I-construct ang email. Kinahanglan @staff.com aron mag-match sa imong DB
+    const emailToUse = username.includes('@') 
+      ? username.trim() 
+      : `${username.toLowerCase().trim()}@staff.com`;
+
+    // 2. Sign in gamit ang Supabase Auth
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: emailToUse,
+      password: password,
+    });
+
+    if (authError) {
+      // Kung mugawas gihapon ang "Email not confirmed", pasabot karaan to nga account
+      // Kinahanglan i-delete ang karaan ug mag-create og bag-o sa User Management
+      alert("Login Error: " + authError.message);
+      setLoading(false);
+      return;
+    }
+
+    // 3. Kuhaon ang role ug status gikan sa 'profiles' table
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role, status')
+      .eq('id', data.user.id)
+      .single();
+
+    if (profileError || !profile) {
+      await supabase.auth.signOut();
+      alert("Access Denied: Walay profile nga nakit-an sa database.");
+      setLoading(false);
+      return;
+    }
+
+    // 4. Status check (Dili pasudlon kung inactive)
+    if (profile.status === 'inactive') {
+      await supabase.auth.signOut();
+      alert("Kini nga account kay Inactive. Kontaka ang imong Admin.");
+      setLoading(false);
+      return;
+    }
+
+    // 5. Redirect base sa Role
+    if (profile.role === 'ADMIN') {
+      window.location.href = "/owner/dashboard";
+    } else {
+      window.location.href = "/cashier/pos";
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-4">
+      <div className="w-full max-w-[400px]">
+        <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 p-10 border border-slate-100">
+          <div className="flex flex-col items-center mb-10">
+            <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center shadow-xl shadow-blue-100 mb-6 rotate-3">
+              <ShoppingBag className="text-white w-10 h-10 -rotate-3" />
+            </div>
+            <h1 className="text-3xl font-black text-slate-800 tracking-tight uppercase">BugasPOS</h1>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em] mt-2">Management System</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                required
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all text-slate-900 font-bold placeholder:text-slate-400"
+              />
+            </div>
+
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                required
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all text-slate-900 font-bold placeholder:text-slate-400"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-lg shadow-blue-100 transition-all active:scale-[0.97] flex items-center justify-center gap-3 uppercase tracking-widest text-sm mt-6"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Sign In"}
+            </button>
+          </form>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        
+        <p className="text-center mt-8 text-slate-400 text-xs font-medium">
+          &copy; 2024 BugasPOS. All rights reserved.
+        </p>
+      </div>
     </div>
   );
 }
