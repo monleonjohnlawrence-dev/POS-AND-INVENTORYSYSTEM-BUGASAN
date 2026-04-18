@@ -8,12 +8,13 @@ import {
 } from 'lucide-react';
 
 export default function InventoryPage() {
-  const [products, setProducts] = useState([]);
+  // FIXED: Added <any[]> type here
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [editingItem, setEditingItem] = useState(null); // Para mahibal-an kung Edit or Add
+  const [editingItem, setEditingItem] = useState<any>(null); // Added <any> type
 
   const [formData, setFormData] = useState({
     name: '',
@@ -32,14 +33,14 @@ export default function InventoryPage() {
 
   useEffect(() => { fetchInventory(); }, []);
 
-  // OPEN MODAL FOR EDIT
-  const openEditModal = (item) => {
+  // FIXED: Added : any type to parameter
+  const openEditModal = (item: any) => {
     setEditingItem(item);
     setFormData({
       name: item.rice_type,
       price: item.retail_price,
       weight_per_sack: item.weight_per_sack,
-      sacks_to_add: 0, // 0 lang ni pirme inig start kay "additional" sacks raman ni
+      sacks_to_add: 0, 
       reorder_level: item.reorder_level
     });
     setShowModal(true);
@@ -51,37 +52,42 @@ export default function InventoryPage() {
 
     const additionalKg = Number(formData.sacks_to_add) * Number(formData.weight_per_sack);
 
-    if (editingItem) {
-      // LOGIC: UPDATE PRICE & ADD STOCK
-      const { error } = await supabase
-        .from('inventory')
-        .update({ 
-          rice_type: formData.name,
-          retail_price: Number(formData.price),
-          total_kg: Number(editingItem.total_kg) + additionalKg, // I-plus ang bag-ong stock
-          reorder_level: Number(formData.reorder_level)
-        })
-        .eq('id', editingItem.id);
+    try {
+      if (editingItem) {
+        // LOGIC: UPDATE PRICE & ADD STOCK
+        const { error } = await supabase
+          .from('inventory')
+          .update({ 
+            rice_type: formData.name,
+            retail_price: Number(formData.price),
+            total_kg: Number(editingItem.total_kg) + additionalKg, 
+            reorder_level: Number(formData.reorder_level)
+          })
+          .eq('id', editingItem.id);
 
-      if (error) alert(error.message);
-    } else {
-      // LOGIC: NEW ITEM
-      const { error } = await supabase
-        .from('inventory')
-        .insert([{ 
-          rice_type: formData.name, 
-          retail_price: Number(formData.price),
-          total_kg: additionalKg, 
-          weight_per_sack: Number(formData.weight_per_sack),
-          reorder_level: Number(formData.reorder_level)
-        }]);
-      if (error) alert(error.message);
+        if (error) throw error;
+      } else {
+        // LOGIC: NEW ITEM
+        const { error } = await supabase
+          .from('inventory')
+          .insert([{ 
+            rice_type: formData.name, 
+            retail_price: Number(formData.price),
+            total_kg: additionalKg, 
+            weight_per_sack: Number(formData.weight_per_sack),
+            reorder_level: Number(formData.reorder_level)
+          }]);
+        if (error) throw error;
+      }
+
+      setShowModal(false);
+      setEditingItem(null);
+      fetchInventory();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsSaving(false);
     }
-
-    setShowModal(false);
-    setEditingItem(null);
-    fetchInventory();
-    setIsSaving(false);
   };
 
   return (
@@ -97,6 +103,16 @@ export default function InventoryPage() {
         </button>
       </div>
 
+      {/* Search Bar Added for Convenience */}
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <input 
+          type="text" placeholder="Search variety..." 
+          className="w-full pl-12 pr-4 py-4 bg-white border border-slate-100 rounded-2xl font-bold"
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
       {/* Product List */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -110,7 +126,7 @@ export default function InventoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {products.map((product) => {
+              {products.filter((p: any) => p.rice_type.toLowerCase().includes(searchTerm.toLowerCase())).map((product: any) => {
                 const fullSacks = Math.floor(product.total_kg / product.weight_per_sack);
                 const looseKg = (product.total_kg % product.weight_per_sack).toFixed(1);
                 
@@ -139,10 +155,13 @@ export default function InventoryPage() {
               })}
             </tbody>
           </table>
+          {products.length === 0 && !loading && (
+            <div className="p-20 text-center text-slate-300 font-bold uppercase text-xs tracking-widest">No inventory found.</div>
+          )}
         </div>
       </div>
 
-      {/* Modal for Add & Edit (Restock/Price Change) */}
+      {/* Modal for Add & Edit */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl border border-white">
@@ -153,20 +172,20 @@ export default function InventoryPage() {
             <form onSubmit={handleSave} className="space-y-4">
               <div>
                 <label className="text-[10px] font-black text-slate-400 ml-2 uppercase">Rice Name</label>
-                <input required className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold" 
+                <input required className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-900" 
                   value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 ml-2 uppercase tracking-widest">New Price (₱)</label>
+                  <label className="text-[10px] font-black text-slate-400 ml-2 uppercase tracking-widest">Price (₱)</label>
                   <input type="number" step="0.01" required className="w-full px-5 py-4 bg-blue-50 border border-blue-100 rounded-2xl font-black text-blue-600" 
                     value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-400 ml-2 uppercase tracking-widest">Add Sacks</label>
                   <input type="number" required className="w-full px-5 py-4 bg-green-50 border border-green-100 rounded-2xl font-black text-green-600" 
-                    value={formData.sacks_to_add} onChange={e => setFormData({...formData, sacks_to_add: e.target.value})} />
+                    value={formData.sacks_to_add} onChange={e => setFormData({...formData, sacks_to_add: Number(e.target.value)})} />
                 </div>
               </div>
 
@@ -180,8 +199,8 @@ export default function InventoryPage() {
 
               <div className="flex gap-2 pt-4">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 font-bold text-slate-400 uppercase text-xs">Cancel</button>
-                <button type="submit" className="flex-[2] bg-slate-900 text-white py-4 rounded-2xl font-black shadow-lg transition-all active:scale-95 uppercase">
-                  {editingItem ? 'Update & Restock' : 'Confirm Add'}
+                <button type="submit" disabled={isSaving} className="flex-[2] bg-slate-900 text-white py-4 rounded-2xl font-black shadow-lg transition-all active:scale-95 uppercase disabled:opacity-50">
+                  {isSaving ? 'Saving...' : (editingItem ? 'Update & Restock' : 'Confirm Add')}
                 </button>
               </div>
             </form>

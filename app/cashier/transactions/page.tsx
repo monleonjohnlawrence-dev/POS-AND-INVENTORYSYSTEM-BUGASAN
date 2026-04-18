@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Receipt, Clock, Filter, ArrowUpRight, Loader2, ShoppingBag } from 'lucide-react';
 
 export default function CashierTransactions() {
-  const [sales, setSales] = useState([]);
+  const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -9,7 +9,7 @@ import {
 
 export default function OwnerDashboard() {
   const [loading, setLoading] = useState(true);
-  const [recentSales, setRecentSales] = useState([]); // Para sa table
+  const [recentSales, setRecentSales] = useState<any[]>([]); // Para sa table
   const [stats, setStats] = useState({
     today: 0,
     monthly: 0,
