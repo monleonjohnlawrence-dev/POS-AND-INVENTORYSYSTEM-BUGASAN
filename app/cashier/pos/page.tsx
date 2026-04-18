@@ -8,15 +8,15 @@ import {
 } from 'lucide-react';
 
 export default function CashierPOS() {
-const [inventory, setInventory] = useState<any[]>([]);
-const [cart, setCart] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [cart, setCart] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // MODAL STATE
+  // MODAL STATE - Fixed with explicit types
   const [showQtyModal, setShowQtyModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
   const [qtyInput, setQtyInput] = useState("1");
 
   useEffect(() => { fetchData(); }, []);
@@ -28,7 +28,8 @@ const [cart, setCart] = useState<any[]>([]);
     setLoading(false);
   };
 
-  const handleItemClick = (item) => {
+  // Fixed with : any type
+  const handleItemClick = (item: any) => {
     setSelectedItem(item);
     setQtyInput("1");
     setShowQtyModal(true);
@@ -39,17 +40,19 @@ const [cart, setCart] = useState<any[]>([]);
     if (isNaN(qty) || qty <= 0) return alert("Butangi og saktong timbang.");
     if (qty > selectedItem.total_kg) return alert("Dili kaabot ang stock!");
 
-    const existing = cart.find(i => i.id === selectedItem.id);
+    const existing = cart.find((i: any) => i.id === selectedItem.id);
     if (existing) {
-      setCart(cart.map(i => i.id === selectedItem.id ? { ...i, qty: i.qty + qty } : i));
+      setCart(cart.map((i: any) => i.id === selectedItem.id ? { ...i, qty: i.qty + qty } : i));
     } else {
       setCart([...cart, { ...selectedItem, qty: qty }]);
     }
     setShowQtyModal(false);
   };
 
-  const removeFromCart = (id) => setCart(cart.filter(item => item.id !== id));
-  const totalAmount = cart.reduce((sum, item) => sum + (item.retail_price * item.qty), 0);
+  // Fixed with : any type
+  const removeFromCart = (id: any) => setCart(cart.filter((item: any) => item.id !== id));
+  
+  const totalAmount = cart.reduce((sum, item: any) => sum + (item.retail_price * item.qty), 0);
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
@@ -62,13 +65,14 @@ const [cart, setCart] = useState<any[]>([]);
           .eq('id', item.id);
         if (invError) throw invError;
       }
-      const summary = cart.map(i => `${i.qty}kg ${i.rice_type}`).join(", ");
+      
+      const summary = cart.map((i: any) => `${i.qty}kg ${i.rice_type}`).join(", ");
       await supabase.from('sales').insert([{ items_summary: summary, total_amount: totalAmount }]);
       
       alert("Halin Recorded!");
       setCart([]);
       fetchData();
-    } catch (err) {
+    } catch (err: any) {
       alert("Error: " + err.message);
     } finally {
       setIsProcessing(false);
@@ -86,7 +90,7 @@ const [cart, setCart] = useState<any[]>([]);
             <input 
               type="text" 
               placeholder="Search rice variety..." 
-              className="w-full pl-12 pr-4 py-5 bg-slate-50 border-none rounded-2xl font-bold focus:ring-2 focus:ring-blue-500" 
+              className="w-full pl-12 pr-4 py-5 bg-slate-50 border-none rounded-2xl font-bold focus:ring-2 focus:ring-blue-500 text-slate-900" 
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)} 
             />
@@ -96,7 +100,7 @@ const [cart, setCart] = useState<any[]>([]);
             <div className="flex justify-center p-20"><Loader2 className="animate-spin text-blue-500" /></div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {inventory.filter(i => i.rice_type.toLowerCase().includes(searchTerm.toLowerCase())).map(item => (
+              {inventory.filter((i: any) => i.rice_type.toLowerCase().includes(searchTerm.toLowerCase())).map((item: any) => (
                 <button 
                   key={item.id} 
                   onClick={() => handleItemClick(item)} 
@@ -137,7 +141,7 @@ const [cart, setCart] = useState<any[]>([]);
                 <p className="text-sm font-bold uppercase tracking-widest">Empty Order</p>
               </div>
             ) : (
-              cart.map(item => (
+              cart.map((item: any) => (
                 <div key={item.id} className="flex justify-between items-center bg-slate-50 p-5 rounded-[2rem] border border-slate-100 group">
                   <div className="flex-1">
                     <p className="font-black text-slate-800 text-sm uppercase">{item.rice_type}</p>
@@ -199,7 +203,7 @@ const [cart, setCart] = useState<any[]>([]);
 
               <div className="bg-slate-900 p-6 rounded-[2rem] flex justify-between items-center text-white">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sub-total</span>
-                <span className="text-2xl font-black italic">₱{(parseFloat(qtyInput || 0) * selectedItem?.retail_price).toFixed(2)}</span>
+                <span className="text-2xl font-black italic">₱{(parseFloat(qtyInput || "0") * (selectedItem?.retail_price || 0)).toFixed(2)}</span>
               </div>
 
               <button 
