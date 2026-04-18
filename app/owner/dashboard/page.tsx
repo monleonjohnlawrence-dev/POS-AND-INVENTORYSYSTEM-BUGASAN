@@ -26,12 +26,12 @@ export default function OwnerDashboard() {
     fetchDashboardData();
     
     // REAL-TIME LISTENER
-    const channel = supabase
-      .channel('dashboard_updates')
-      .on('postgres_changes', { event: 'INSERT', table: 'sales' }, () => {
-        fetchDashboardData();
-      })
-      .subscribe();
+   const channel = supabase
+  .channel('dashboard_updates')
+  .on('postgres_changes' as any, { event: 'INSERT', table: 'sales' } as any, () => {
+    fetchDashboardData();
+  })
+  .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, []);
